@@ -51,6 +51,7 @@ export async function getTeamKpis() {
 
     return {
       id: u.id,
+      email: u.email,
       name: u.name,
       avatarUrl: u.avatarUrl,
       role: u.jobTitle || (u.role === 'ADMIN' ? 'Admin' : 'Team Member'),

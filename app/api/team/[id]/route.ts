@@ -10,6 +10,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const body = await req.json();
   const data: any = {};
   if (body.name !== undefined) data.name = body.name;
+  if (body.email !== undefined) data.email = String(body.email).toLowerCase().trim();
   if (body.jobTitle !== undefined) data.jobTitle = body.jobTitle;
   if (body.verticals !== undefined) data.verticalTags = body.verticals;
   if (body.role !== undefined) data.role = body.role === 'ADMIN' ? 'ADMIN' : 'MEMBER';
