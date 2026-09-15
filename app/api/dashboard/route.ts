@@ -18,8 +18,17 @@ export async function GET() {
     getDashboardSummary(),
   ]);
 
+  const clientProjects = new Map<string, string[]>();
+  for (const project of projects) {
+    const verticalName = project.vertical?.name;
+    if (!verticalName) continue;
+    const existing = clientProjects.get(project.clientId) ?? [];
+    if (!existing.includes(verticalName)) existing.push(verticalName);
+    clientProjects.set(project.clientId, existing);
+  }
+
   return NextResponse.json({
-    clients: clients.map(mapClient),
+    clients: clients.map((client) => ({ ...mapClient(client), verticals: clientProjects.get(client.id) ?? [] })),
     projects: projects.map(mapProject),
     tasks: tasks.map(mapTask),
     proposals: proposals.map(mapProposal),
