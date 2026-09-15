@@ -8,10 +8,12 @@ type Data={clients:any[];team:any[];verticals:any[];proposals:any[];projects:any
 const colors=['#2563eb','#10b981','#8b5cf6','#f59e0b','#ec4899','#06b6d4','#64748b','#f97316','#6366f1','#14b8a6'];
 const nav=[['Overview',Home],['Clients',Users],['Projects',BriefcaseBusiness],['Verticals',Layers3],['Tasks',ListTodo],['Team',Users],['Proposals',FileText],['Reports',ClipboardList],['Settings',Settings]] as const;
 export default function Dashboard(){
- const [data,setData]=useState<Data|null>(null); const [loading,setLoading]=useState(true); const [section,setSection]=useState('Overview'); const [selected,setSelected]=useState<string|null>(null); const [menu,setMenu]=useState(false); const [search,setSearch]=useState(''); const [showForm,setShowForm]=useState(false);
- const load=()=>fetch('/api/dashboard').then(r=>r.json()).then(setData).finally(()=>setLoading(false));
+ const [data,setData]=useState<Data|null>(null); const [loading,setLoading]=useState(true); const [error,setError]=useState(''); const [section,setSection]=useState('Overview'); const [selected,setSelected]=useState<string|null>(null); const [menu,setMenu]=useState(false); const [search,setSearch]=useState(''); const [showForm,setShowForm]=useState(false);
+ const load=async()=>{setLoading(true);setError('');try{const response=await fetch('/api/dashboard');const payload=await response.json();if(!response.ok)throw new Error(payload.error||'Unable to load dashboard data.');setData(payload)}catch(error){setData(null);setError(error instanceof Error?error.message:'Unable to load dashboard data.')}finally{setLoading(false)}};
  useEffect(()=>{load()},[]);
- if(loading||!data) return <div className="loading">Loading 31G Operations Center…</div>;
+ if(loading) return <div className="loading">Loading 31G Operations Center…</div>;
+ if(error) return <div className="loading">{error}</div>;
+ if(!data) return <div className="loading">No dashboard data available.</div>;
  const selectedMember=data.team.find(t=>t.id===selected);
  const filteredClients=data.clients.filter(c=>c.name.toLowerCase().includes(search.toLowerCase()));
  const filteredProjects=data.projects.filter(p=>{const c=data.clients.find(x=>x.id===p.clientId);return (p.name+' '+(c?.name||'')+' '+p.vertical).toLowerCase().includes(search.toLowerCase())});
