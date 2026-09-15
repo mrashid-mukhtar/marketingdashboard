@@ -10,7 +10,6 @@ const authConfig = {
       if (user) {
         token.id = (user as any).id;
         token.role = (user as any).role;
-        token.avatarUrl = (user as any).avatarUrl;
       }
       return token;
     },
@@ -18,7 +17,6 @@ const authConfig = {
       if (session.user) {
         (session.user as any).id = token.id as string;
         (session.user as any).role = token.role as 'ADMIN' | 'MEMBER';
-        (session.user as any).avatarUrl = token.avatarUrl as string | null;
       }
       return session;
     },
