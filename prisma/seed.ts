@@ -18,7 +18,7 @@ const VERTICALS = [
 
 // [name, email, role, jobTitle, verticalTags]
 const TEAM: [string, string, 'ADMIN' | 'MEMBER', string, string[]][] = [
-  ['Rashid Admin', 'admin@31g.com', 'ADMIN', 'Operations Admin', []],
+  ['Rashid Admin', 'admin@31g.co.uk', 'ADMIN', 'Operations Admin', []],
   ['Ali Raza', 'ali.raza@31g.com', 'MEMBER', 'Social Media Executive', ['SMM', 'Content']],
   ['Sara Khan', 'sara.khan@31g.com', 'MEMBER', 'Content Specialist', ['Content', 'Email']],
   ['Hamza Ali', 'hamza.ali@31g.com', 'MEMBER', 'SEO Specialist', ['SEO', 'Analytics']],
@@ -182,7 +182,7 @@ async function main() {
   }
 
   console.log('\nSeed complete.');
-  console.log(`Login as admin@31g.com or any team email above, password: ${DEFAULT_PASSWORD}`);
+  console.log(`Login as admin@31g.co.uk or any team email above, password: ${DEFAULT_PASSWORD}`);
   console.log('Change these passwords before real use.');
 }
 

@@ -36,8 +36,8 @@ if you want a stricter split — e.g. only admins creating projects.
    (`npx auth secret`).
 3. `npm run db:migrate` — creates the tables.
 4. `npm run db:seed` — loads sample clients/projects/tasks and creates team logins.
-   **Every seeded account's password is `ChangeMe123!`** (see `prisma/seed.ts` for emails — e.g.
-   `admin@31g.com` is the admin account). Change these before real use.
+  **Every seeded account's password is `ChangeMe123!`** (see `prisma/seed.ts` for emails — e.g.
+  `admin@31g.co.uk` is the admin account). Change these before real use.
 5. `npm run dev` and sign in at `/login`.
 
 ## Deploy on Vercel
