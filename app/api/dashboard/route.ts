@@ -27,6 +27,6 @@ export async function GET() {
     verticals,
     dailyLabels,
     summary,
-    currentUser: { id: user.id, name: user.name, role: user.role },
+    currentUser: { id: user.id, name: user.name, role: user.role, avatarUrl: (team.find((member) => member.id === user.id) as any)?.avatarUrl ?? null },
   });
 }

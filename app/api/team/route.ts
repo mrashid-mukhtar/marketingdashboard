@@ -31,6 +31,7 @@ export async function POST(req: Request) {
       role: body.role === 'ADMIN' ? 'ADMIN' : 'MEMBER',
       jobTitle: body.jobTitle ?? null,
       verticalTags: body.verticals ?? [],
+      avatarUrl: body.avatarUrl ?? null,
     },
   });
 

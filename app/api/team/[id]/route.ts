@@ -14,6 +14,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (body.verticals !== undefined) data.verticalTags = body.verticals;
   if (body.role !== undefined) data.role = body.role === 'ADMIN' ? 'ADMIN' : 'MEMBER';
   if (body.active !== undefined) data.active = !!body.active;
+  if (body.avatarUrl !== undefined) data.avatarUrl = body.avatarUrl || null;
 
   const updated = await prisma.user.update({ where: { id }, data });
   return NextResponse.json({ id: updated.id, name: updated.name, role: updated.role, active: updated.active });
