@@ -2,7 +2,9 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireUser, isErrorResponse } from '@/lib/rbac';
 import { mapClient, mapProject, mapTask, mapProposal } from '@/lib/mappers';
-import { getTeamKpis, getVerticalKpis, getDashboardSummary, dailyLabels } from '@/lib/kpi';
+import { getTeamKpis, getVerticalKpis, getDashboardSummary, dailyLabels, KpiRange } from '@/lib/kpi';
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 export async function GET(req: Request) {
   const user = await requireUser();
@@ -11,15 +13,16 @@ export async function GET(req: Request) {
   const start = params.get('start');
   const end = params.get('end');
   const dueDate = start && end ? { gte: new Date(`${start}T00:00:00.000Z`), lte: new Date(`${end}T23:59:59.999Z`) } : undefined;
+  const range: KpiRange | undefined = dueDate ? { start: dueDate.gte, end: dueDate.lte } : undefined;
 
   const [clients, projects, tasks, proposals, team, verticals, summary] = await Promise.all([
     prisma.client.findMany({ orderBy: { createdAt: 'asc' } }),
     prisma.project.findMany({ include: { vertical: true, tasks: { select: { status: true } } }, orderBy: { createdAt: 'asc' } }),
     prisma.task.findMany({ where: dueDate ? { dueDate } : undefined, include: { vertical: true }, orderBy: { createdAt: 'asc' } }),
     prisma.proposal.findMany({ orderBy: { createdAt: 'asc' } }),
-    getTeamKpis(),
-    getVerticalKpis(),
-    getDashboardSummary(),
+    getTeamKpis(range),
+    getVerticalKpis(range),
+    getDashboardSummary(range),
   ]);
 
   const clientProjects = new Map<string, string[]>();
@@ -31,7 +34,11 @@ export async function GET(req: Request) {
     clientProjects.set(project.clientId, existing);
   }
 
-  const range = { start, end };
+  const rangeLabels = team[0]?.daily?.map((_: number, index: number) => {
+    const date = new Date((range?.start ?? new Date()).getTime() + index * DAY_MS);
+    return date.toISOString().slice(5, 10);
+  }) ?? dailyLabels;
+  const selectedRange = { start, end };
   const rangeSummary = { ...summary, totalAssigned: tasks.length, totalCompleted: tasks.filter((task) => task.status === 'DONE').length };
   return NextResponse.json({
     clients: clients.map((client) => ({ ...mapClient(client), verticals: clientProjects.get(client.id) ?? [] })),
@@ -40,9 +47,9 @@ export async function GET(req: Request) {
     proposals: proposals.map(mapProposal),
     team,
     verticals,
-    dailyLabels,
+    dailyLabels: rangeLabels,
     summary: rangeSummary,
     currentUser: { id: user.id, name: user.name, role: user.role, avatarUrl: (team.find((member) => member.id === user.id) as any)?.avatarUrl ?? null },
-    range,
+    range: selectedRange,
   });
 }

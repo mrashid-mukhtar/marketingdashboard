@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 export const dailyLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+export type KpiRange = { start: Date; end: Date };
 
 function startOfDay(d: Date) {
   const x = new Date(d);
@@ -15,20 +16,22 @@ function pct(numerator: number, denominator: number) {
 }
 
 /** Per team member: workload, completion, on-time rate, quality, and last-7-day activity. */
-export async function getTeamKpis() {
+export async function getTeamKpis(range?: KpiRange) {
+  const taskRange = range ? { dueDate: { gte: range.start, lte: range.end } } : undefined;
   const users = await prisma.user.findMany({
     where: { active: true },
     include: {
-      assignedTasks: true,
+      assignedTasks: { where: taskRange },
       ownedProjects: { select: { id: true } },
     },
     orderBy: { createdAt: 'asc' },
   });
 
   const today = startOfDay(new Date());
-  const sevenDaysAgo = new Date(today.getTime() - 6 * DAY_MS);
+  const sevenDaysAgo = range ? startOfDay(range.start) : new Date(today.getTime() - 6 * DAY_MS);
+  const rangeEnd = range ? startOfDay(range.end) : today;
   const logs = await prisma.dailyLog.findMany({
-    where: { date: { gte: sevenDaysAgo } },
+    where: { date: { gte: sevenDaysAgo, lte: rangeEnd } },
   });
 
   return users.map((u) => {
@@ -43,7 +46,8 @@ export async function getTeamKpis() {
 
     const projectIds = new Set<string>([...u.ownedProjects.map((p) => p.id), ...tasks.map((t) => t.projectId)]);
     const userLogs = logs.filter((l) => l.userId === u.id);
-    const daily = Array.from({ length: 7 }).map((_, i) => {
+    const dayCount = Math.max(1, Math.round((rangeEnd.getTime() - sevenDaysAgo.getTime()) / DAY_MS) + 1);
+    const daily = Array.from({ length: dayCount }).map((_, i) => {
       const day = new Date(sevenDaysAgo.getTime() + i * DAY_MS);
       const log = userLogs.find((l) => startOfDay(l.date).getTime() === day.getTime());
       return log?.tasksCompleted ?? 0;
@@ -68,9 +72,9 @@ export async function getTeamKpis() {
 }
 
 /** Per vertical: assigned/completed task counts, on-time rate, avg quality. */
-export async function getVerticalKpis() {
+export async function getVerticalKpis(range?: KpiRange) {
   const verticals = await prisma.vertical.findMany({
-    include: { tasks: true },
+    include: { tasks: { where: range ? { dueDate: { gte: range.start, lte: range.end } } : undefined } },
     orderBy: { name: 'asc' },
   });
 
@@ -79,16 +83,16 @@ export async function getVerticalKpis() {
     const completed = v.tasks.filter((t) => t.status === 'DONE');
     const onTimeCompleted = completed.filter((t) => !t.dueDate || (t.completedAt && t.completedAt <= t.dueDate));
     const qualityScores = completed.map((t) => t.qualityScore).filter((q): q is number => q != null);
-    const avgQuality = qualityScores.length ? qualityScores.reduce((a, b) => a + b, 0) / qualityScores.length : 4.2;
+    const avgQuality = qualityScores.length ? qualityScores.reduce((a, b) => a + b, 0) / qualityScores.length : 0;
 
     return {
       id: v.id,
       name: v.name,
       short: v.shortName,
-      score: pct(completed.length, assigned || 1),
+      score: pct(completed.length, assigned),
       assigned,
       completed: completed.length,
-      onTime: pct(onTimeCompleted.length, completed.length || 1),
+      onTime: pct(onTimeCompleted.length, completed.length),
       quality: Number(avgQuality.toFixed(1)),
       response: '—',
       trend: 0,
@@ -97,16 +101,16 @@ export async function getVerticalKpis() {
 }
 
 /** Top-level counters shown on the Overview page. */
-export async function getDashboardSummary() {
+export async function getDashboardSummary(range?: KpiRange) {
   const [clients, activeProjects, openProposals, team, verticals] = await Promise.all([
     prisma.client.count(),
     prisma.project.count({ where: { status: 'ACTIVE' } }),
     prisma.proposal.count({ where: { status: { notIn: ['WON', 'LOST'] } } }),
     prisma.user.count({ where: { active: true } }),
-    getVerticalKpis(),
+    getVerticalKpis(range),
   ]);
 
-  const teamKpis = await getTeamKpis();
+  const teamKpis = await getTeamKpis(range);
   const totalAssigned = verticals.reduce((s, v) => s + v.assigned, 0);
   const totalCompleted = verticals.reduce((s, v) => s + v.completed, 0);
   const overall = verticals.length ? Math.round(verticals.reduce((s, v) => s + v.score, 0) / verticals.length) : 0;
