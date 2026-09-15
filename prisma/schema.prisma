@@ -1,0 +1,202 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  ADMIN
+  MEMBER
+}
+
+enum ProjectStatus {
+  PLANNING
+  ACTIVE
+  REVIEW
+  COMPLETED
+  BLOCKED
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  REVIEW
+  DONE
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum ClientStatus {
+  ACTIVE
+  AT_RISK
+  PAUSED
+}
+
+enum ProposalStatus {
+  DRAFT
+  IN_REVIEW
+  IN_PROGRESS
+  WON
+  LOST
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String
+  name          String
+  role          Role      @default(MEMBER)
+  jobTitle      String?
+  verticalTags  String[]  @default([])
+  active        Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  ownedProjects Project[] @relation("ProjectOwner")
+  assignedTasks Task[]    @relation("TaskAssignee")
+  dailyLogs     DailyLog[]
+  taskEvents    TaskStatusEvent[]
+  projectEvents ProjectStatusEvent[]
+}
+
+model Vertical {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  shortName String
+  projects  Project[]
+  tasks     Task[]
+}
+
+model Client {
+  id           String       @id @default(cuid())
+  name         String
+  status       ClientStatus @default(ACTIVE)
+  campaigns    Int          @default(0)
+  reach        String?
+  engagement   String?
+  leads        Int          @default(0)
+  conversions  Int          @default(0)
+  healthScore  Int          @default(75)
+  verticalTags String[]     @default([])
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  projects  Project[]
+  tasks     Task[]
+  proposals Proposal[]
+}
+
+model Project {
+  id         String        @id @default(cuid())
+  name       String
+  clientId   String
+  client     Client        @relation(fields: [clientId], references: [id])
+  verticalId String?
+  vertical   Vertical?     @relation(fields: [verticalId], references: [id])
+  ownerId    String?
+  owner      User?         @relation("ProjectOwner", fields: [ownerId], references: [id])
+  status     ProjectStatus @default(PLANNING)
+  priority   Priority      @default(MEDIUM)
+  dueDate    DateTime?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  tasks        Task[]
+  statusEvents ProjectStatusEvent[]
+
+  @@index([clientId])
+  @@index([ownerId])
+}
+
+model Task {
+  id             String     @id @default(cuid())
+  title          String
+  projectId      String
+  project        Project    @relation(fields: [projectId], references: [id])
+  clientId       String?
+  client         Client?    @relation(fields: [clientId], references: [id])
+  verticalId     String?
+  vertical       Vertical?  @relation(fields: [verticalId], references: [id])
+  assigneeId     String?
+  assignee       User?      @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  status         TaskStatus @default(TODO)
+  priority       Priority   @default(MEDIUM)
+  dueDate        DateTime?
+  estimatedHours Float?
+  qualityScore   Float?
+  completedAt    DateTime?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  statusEvents TaskStatusEvent[]
+
+  @@index([projectId])
+  @@index([assigneeId])
+  @@index([status])
+}
+
+model TaskStatusEvent {
+  id          String      @id @default(cuid())
+  taskId      String
+  task        Task        @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  fromStatus  TaskStatus?
+  toStatus    TaskStatus
+  changedById String?
+  changedBy   User?       @relation(fields: [changedById], references: [id])
+  createdAt   DateTime    @default(now())
+
+  @@index([taskId])
+  @@index([createdAt])
+}
+
+model ProjectStatusEvent {
+  id          String        @id @default(cuid())
+  projectId   String
+  project     Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  fromStatus  ProjectStatus?
+  toStatus    ProjectStatus
+  changedById String?
+  changedBy   User?         @relation(fields: [changedById], references: [id])
+  createdAt   DateTime      @default(now())
+
+  @@index([projectId])
+  @@index([createdAt])
+}
+
+model DailyLog {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id])
+  date           DateTime @db.Date
+  tasksCompleted Int      @default(0)
+  hoursLogged    Float    @default(0)
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([userId, date])
+  @@index([date])
+}
+
+model Proposal {
+  id         String         @id @default(cuid())
+  clientId   String?
+  client     Client?        @relation(fields: [clientId], references: [id])
+  clientName String
+  service    String
+  status     ProposalStatus @default(DRAFT)
+  value      Float
+  nextStep   String?
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  @@index([clientId])
+}
