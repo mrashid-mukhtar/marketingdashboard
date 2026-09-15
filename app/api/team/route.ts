@@ -22,18 +22,37 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'name, email and password are required' }, { status: 400 });
   }
 
+  const email = String(body.email).toLowerCase().trim();
   const passwordHash = await bcrypt.hash(body.password, 10);
-  const created = await prisma.user.create({
-    data: {
-      name: body.name,
-      email: String(body.email).toLowerCase().trim(),
-      passwordHash,
-      role: body.role === 'ADMIN' ? 'ADMIN' : 'MEMBER',
-      jobTitle: body.jobTitle ?? null,
-      verticalTags: body.verticals ?? [],
-      avatarUrl: body.avatarUrl ?? null,
-    },
-  });
+  const existing = await prisma.user.findUnique({ where: { email } });
+  if (existing?.active) {
+    return NextResponse.json({ error: 'A team member with this email already exists' }, { status: 409 });
+  }
 
-  return NextResponse.json({ id: created.id, name: created.name, email: created.email, role: created.role }, { status: 201 });
+  const created = existing
+    ? await prisma.user.update({
+        where: { id: existing.id },
+        data: {
+          name: body.name,
+          passwordHash,
+          role: body.role === 'ADMIN' ? 'ADMIN' : 'MEMBER',
+          jobTitle: body.jobTitle ?? null,
+          verticalTags: body.verticals ?? [],
+          avatarUrl: body.avatarUrl ?? null,
+          active: true,
+        },
+      })
+    : await prisma.user.create({
+        data: {
+          name: body.name,
+          email,
+          passwordHash,
+          role: body.role === 'ADMIN' ? 'ADMIN' : 'MEMBER',
+          jobTitle: body.jobTitle ?? null,
+          verticalTags: body.verticals ?? [],
+          avatarUrl: body.avatarUrl ?? null,
+        },
+      });
+
+  return NextResponse.json({ id: created.id, name: created.name, email: created.email, role: created.role }, { status: existing ? 200 : 201 });
 }
