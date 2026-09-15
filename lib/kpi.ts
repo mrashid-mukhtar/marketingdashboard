@@ -36,10 +36,10 @@ export async function getTeamKpis() {
     const completed = tasks.filter((t) => t.status === 'DONE');
     const onTimeCompleted = completed.filter((t) => !t.dueDate || (t.completedAt && t.completedAt <= t.dueDate));
     const qualityScores = completed.map((t) => t.qualityScore).filter((q): q is number => q != null);
-    const avgQuality = qualityScores.length ? qualityScores.reduce((a, b) => a + b, 0) / qualityScores.length : 4.2;
-    const onTimeRate = pct(onTimeCompleted.length, completed.length || 1);
-    const completionRate = pct(completed.length, tasks.length || 1);
-    const score = Math.round(onTimeRate * 0.4 + (avgQuality / 5) * 100 * 0.4 + completionRate * 0.2);
+    const avgQuality = qualityScores.length ? qualityScores.reduce((a, b) => a + b, 0) / qualityScores.length : 0;
+    const onTimeRate = pct(onTimeCompleted.length, completed.length);
+    const completionRate = pct(completed.length, tasks.length);
+    const score = tasks.length ? Math.round(onTimeRate * 0.4 + (avgQuality / 5) * 100 * 0.4 + completionRate * 0.2) : 0;
 
     const projectIds = new Set<string>([...u.ownedProjects.map((p) => p.id), ...tasks.map((t) => t.projectId)]);
     const userLogs = logs.filter((l) => l.userId === u.id);
