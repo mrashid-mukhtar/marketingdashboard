@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { requireUser, isErrorResponse } from '@/lib/rbac';
+import { requireUser, requireAdmin, isErrorResponse } from '@/lib/rbac';
 import { mapProject, projectStatusFromLabel, priorityFromLabel } from '@/lib/mappers';
 
 export async function GET() {
@@ -15,7 +15,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const user = await requireUser();
+  const user = await requireAdmin();
   if (isErrorResponse(user)) return user;
 
   const body = await req.json();

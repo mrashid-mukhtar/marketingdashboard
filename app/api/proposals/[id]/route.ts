@@ -4,7 +4,7 @@ import { requireUser, requireAdmin, isErrorResponse } from '@/lib/rbac';
 import { mapProposal, proposalStatusFromLabel } from '@/lib/mappers';
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const user = await requireUser();
+  const user = await requireAdmin();
   if (isErrorResponse(user)) return user;
   const { id } = await params;
 

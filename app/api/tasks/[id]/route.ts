@@ -12,6 +12,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   const body = await req.json();
+  if (user.role !== 'ADMIN' && Object.keys(body).some((key) => key !== 'status')) {
+    return NextResponse.json({ error: 'Members may only update task status' }, { status: 403 });
+  }
   const data: any = {};
   if (body.title !== undefined) data.title = body.title;
   if (body.assigneeId !== undefined) data.assigneeId = body.assigneeId; // reassign / "assign work"
